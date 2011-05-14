@@ -24,6 +24,9 @@
   ? interp.waitAtTop(t)
   ? t
   # value: 0
+  
+  ? ic
+  # value: <ref disconnected by problem: <EOFException>>
 
 --- Test case: killing
 
@@ -46,3 +49,8 @@
   ? interp.waitAtTop(oc.terminates())
   ? oc.terminates()
   # value: 143
+  
+XXX this should work: but doesn't:
+  x ? interp.waitAtTop(Ref.whenBroken(ic, fn _ {}))
+  x ? ic
+  x # value: <ref disconnected by problem: <EOFException>>
