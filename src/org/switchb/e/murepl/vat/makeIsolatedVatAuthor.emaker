@@ -6,12 +6,22 @@ def resourcePath(lookupName) {
 
 def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
   def classpath := props["java.class.path"]
-  def limitPath := resourcePath("limit.sh")
+  def limitToolPath := resourcePath("limit.sh")
   def System := <unsafe:java.lang.makeSystem>
   def makeOutputStreamWriter := <unsafe:java.io.makeOutputStreamWriter>
   
   return def makeIsolatedVat {
-    to run() {
+    to run(limits :Map[String, int]) {
+      
+      # Convert limits into system ulimit options
+      var limitCodes := []
+      for parameter => value in limits {
+        switch (parameter) {
+          match =="cpuSeconds" {
+            limitCodes += ["-l", "-t", E.toString(value)]
+          }
+        }
+      }
       
       # A promise for the remote vat's internal controller
       def [remoteRcvr, remoteResolver] := Ref.promise()
@@ -23,7 +33,7 @@ def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, st
       
       # Start actual subprocess
       def process := <unsafe:java.lang.makeRuntime>.getRuntime().exec(
-        [limitPath, classpath, text],
+        [limitToolPath] + limitCodes + ["--", classpath, text],
         null,
         null)
 

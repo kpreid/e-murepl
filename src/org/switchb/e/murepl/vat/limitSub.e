@@ -10,7 +10,10 @@ def bootstrapResolver := introducer.sturdyFromURI(bootstrapSturdyText).getRcvr()
 def innerController {
   
   to seed(expr :EExpr) {
-    return expr.eval(privilegedScope)
+    #stderr.println(`seed $expr`)
+    def r := expr.eval(privilegedScope)
+    #stderr.println("done seed")
+    return r
   }
   
   to orderlyShutdown() {
