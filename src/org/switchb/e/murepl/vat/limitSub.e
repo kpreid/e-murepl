@@ -12,6 +12,11 @@ def bootstrapResolver := introducer.sturdyFromURI(bootstrapSturdyText).getRcvr()
 /** This object provides access to the sub-vat */
 def innerController {
   
+  to __reactToLostClient(problem) {
+    traceln(`Shutting down due to lost client: $problem`)
+    innerController.orderlyShutdown()
+  }
+  
   to seed(expr :EExpr) {
     #stderr.println(`seed $expr`)
     def r := expr.eval(privilegedScope)
