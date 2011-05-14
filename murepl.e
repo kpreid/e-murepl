@@ -11,4 +11,4 @@ def seedVat := <elang:interp.seedVatAuthor>(<unsafe>)
 
 def <murepl> := <import:org.switchb.e.murepl.*>
 
-def makeIsolatedVat := <murepl:vat.makeIsolatedVatAuthor>(<unsafe>, <unsafe:java.lang.makeRuntime>, introducer, identityMgr, stdout, stderr, seedVat)
+def makeIsolatedVat := <murepl:vat.makeIsolatedVatAuthor>(<unsafe>, interp.getProps(), <unsafe:java.lang.makeRuntime>, introducer, identityMgr, stdout, stderr, seedVat)

@@ -4,7 +4,8 @@ def resourcePath(lookupName) {
   return <resource>[`org/switchb/e/murepl/vat/$lookupName`].toURI().getPath()
 }
 
-def makeIsolatedVatAuthor(<unsafe>, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
+def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
+  def classpath := props["java.class.path"]
   def limitPath := resourcePath("limit.sh")
   def System := <unsafe:java.lang.makeSystem>
   def makeOutputStreamWriter := <unsafe:java.io.makeOutputStreamWriter>
@@ -22,7 +23,7 @@ def makeIsolatedVatAuthor(<unsafe>, jRuntime, introducer, identityMgr, stdout, s
       
       # Start actual subprocess
       def process := <unsafe:java.lang.makeRuntime>.getRuntime().exec(
-        [limitPath, text],
+        [limitPath, classpath, text],
         null,
         null)
 
