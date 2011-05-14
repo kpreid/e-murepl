@@ -4,44 +4,51 @@ def resourcePath(lookupName) {
   return <resource>[`org/switchb/e/murepl/vat/$lookupName`].toURI().getPath()
 }
 
-def makeIsolatedVatAuthor(makeVat, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
+def makeIsolatedVatAuthor(<unsafe>, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
   def limitPath := resourcePath("limit.sh")
   
   return def makeIsolatedVat {
     to run() {
       
+      # A promise for the remote vat's internal controller
       def [remoteRcvr, remoteResolver] := Ref.promise()
       
-      def [bootstrapSR, bootstrapCancel, _] := identityMgr.makeKnown(remoteResolver)
+      # SturdyRef to the resolver for bootstrapping communication
+      def [bootstrapSR, bootstrapCancel, _] :=
+        identityMgr.makeKnown(remoteResolver)
       def text := introducer.sturdyToURI(bootstrapSR)
       
-      # FIXME: Revoke bootstrapSR once used the first time
-      
-      def vat := makeVat.make("headless", "isolated vat process wait");
-      
-      def exitCodeVow := seedVat(vat, `
-        fn limitPath, text {
-          pragma.syntax("0.9")
-        
-          stderr.println("waitvat booting")
-  
-          def process := <unsafe:java.lang.makeRuntime>.getRuntime().exec(
-            [limitPath, text],
-            null,
-            null)
+      # Start actual subprocess
+      def process := <unsafe:java.lang.makeRuntime>.getRuntime().exec(
+        [limitPath, text],
+        null,
+        null)
 
-          process.attachStderr(stderr)
-          process.attachStdout(stdout)
-          stderr.println("waitvat waiting")
-        
-          process.waitFor()
-        }
-      `) <- (limitPath, text)
+      # Mainly for debugging...
+      process.attachStderr(stderr)
+      process.attachStdout(stdout)
       
+      def [processExitCodeVow, tvat] := process.terminates()
+      
+      # Clean up upon process shutdown
+      when (processExitCodeVow) -> {} catch _ {} finally {
+        bootstrapCancel()
+        tvat.orderlyShutdown()
+        process.abort()
+      }
+      
+      # Revoke bootstrap sturdyref as soon as it has been used
+      when (remoteRcvr) -> {} catch _ {} finally {
+        bootstrapCancel()
+      }
+              
       def outerController {
-        #to kill() {
-        #  XXX don't have our hands on the Process object. Instead of using a vat holding the Process, add an operation like resultsVow which doesn't grab stdout/stderr.
-        #}
+        to kill() {
+          process.destroy()
+        }
+        to terminates() {
+          return processExitCodeVow
+        }
       }
       
       return [remoteRcvr, outerController]

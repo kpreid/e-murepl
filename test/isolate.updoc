@@ -1,0 +1,32 @@
+  ? pragma.syntax("0.9")
+
+  ? interp.setTopScope(e__quasiParser(<file:murepl.e>.getTwine()).evalToPair(privilegedScope)[1]);
+
+--- Test case: orderly shutdown
+
+  ? def [ic, oc] := makeIsolatedVat()
+  # value: [<Promise>, <outerController>]
+
+  ? interp.waitAtTop(ic)
+
+  ? def t := oc.terminates()
+  # value: <Promise>
+
+  ? ic <- orderlyShutdown()
+
+  ? interp.waitAtTop(t)
+  ? t
+  # value: 0
+
+--- Test case: killing
+
+  ? def [ic, oc] := makeIsolatedVat()
+  # value: [<Promise>, <outerController>]
+
+  ? interp.waitAtTop(ic)
+
+  ? oc.kill()
+
+  ? interp.waitAtTop(oc.terminates())
+  ? oc.terminates()
+  # value: 143

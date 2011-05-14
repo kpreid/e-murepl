@@ -1,4 +1,2 @@
-#!/bin/bash
-echo "limit.sh stdout"
-echo "limit.sh stderr" >&2
+#!/bin/sh
 exec rune `dirname $0`/limitSub.e "$@"
