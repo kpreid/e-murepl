@@ -2,7 +2,7 @@
 
   ? interp.setTopScope(e__quasiParser(<file:murepl.e>.getTwine()).evalToPair(privilegedScope)[1]);
 
---- Test case: orderly shutdown
+--- Test case: eval, orderly shutdown
 
   ? def [ic, oc] := makeIsolatedVat()
   # value: [<Promise>, <outerController>]
@@ -10,6 +10,13 @@
   ? interp.waitAtTop(ic)
 
   ? def t := oc.terminates()
+  # value: <Promise>
+
+  ? interp.waitAtTop(def r := ic <- seed(e`1 + 1`))
+  ? r
+  # value: 2
+  
+  ? t
   # value: <Promise>
 
   ? ic <- orderlyShutdown()
@@ -23,7 +30,16 @@
   ? def [ic, oc] := makeIsolatedVat()
   # value: [<Promise>, <outerController>]
 
-  ? interp.waitAtTop(ic)
+  ? def r := ic <- seed(e`while (true) {}`)
+  # value: <Promise> 
+  
+  ? interp.waitAtTop(timer.whenPast(timer.now() + 2000, fn {}))
+  
+  ? oc.terminates() # check process still running
+  # value: <Promise>
+  
+  ? r # check didn't bogusly return
+  # value: <Promise>
 
   ? oc.kill()
 

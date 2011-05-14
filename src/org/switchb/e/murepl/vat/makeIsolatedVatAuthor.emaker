@@ -6,6 +6,8 @@ def resourcePath(lookupName) {
 
 def makeIsolatedVatAuthor(<unsafe>, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
   def limitPath := resourcePath("limit.sh")
+  def System := <unsafe:java.lang.makeSystem>
+  def makeOutputStreamWriter := <unsafe:java.io.makeOutputStreamWriter>
   
   return def makeIsolatedVat {
     to run() {
@@ -25,16 +27,27 @@ def makeIsolatedVatAuthor(<unsafe>, jRuntime, introducer, identityMgr, stdout, s
         null)
 
       # Mainly for debugging...
-      process.attachStderr(stderr)
-      process.attachStdout(stdout)
+      # raw* are guaranteed not to be the updoc output streams
+      def rawStderr := makeOutputStreamWriter(System.getErr())
+      def rawStdout := makeOutputStreamWriter(System.getOut())
+      process.attachStderr(rawStderr)
+      process.attachStdout(rawStdout)
       
       def [processExitCodeVow, tvat] := process.terminates()
       
       # Clean up upon process shutdown
       when (processExitCodeVow) -> {} catch _ {} finally {
+        rawStderr.flush()
+        rawStdout.flush()
         bootstrapCancel()
         tvat.orderlyShutdown()
-        process.abort()
+        remoteResolver.resolveRace(
+          if (Ref.isBroken(processExitCodeVow)) {
+            processExitCodeVow
+          } else {
+            Ref.broken("Isolated vat process unexpectedly terminated")
+          })
+        # process.abort()
       }
       
       # Revoke bootstrap sturdyref as soon as it has been used

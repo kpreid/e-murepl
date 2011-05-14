@@ -1,2 +1,2 @@
 #!/bin/sh
-exec rune `dirname $0`/limitSub.e "$@"
+exec rune -De.onErrorExit=report `dirname $0`/limitSub.e "$@"

@@ -1,11 +1,18 @@
 pragma.syntax("0.9")
 
+def EExpr := <type:org.erights.e.elang.evm.EExpr>
+
 def [bootstrapSturdyText] := interp.getArgs()
 introducer.onTheAir()
 def bootstrapResolver := introducer.sturdyFromURI(bootstrapSturdyText).getRcvr()
 
 /** This object provides access to the sub-vat */
 def innerController {
+  
+  to seed(expr :EExpr) {
+    return expr.eval(privilegedScope)
+  }
+  
   to orderlyShutdown() {
     interp.continueAtTop()
   }
