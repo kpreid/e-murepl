@@ -6,7 +6,7 @@ useful as dogfooding.
 
   ? pragma.syntax("0.9")
   
-  ? interp.setTopScope(<elang:syntax.makeEParser>(<file:murepl.e>.getTwine()).evalToPair(privilegedScope)[1]);
+  ? interp.setTopScope(<elang:syntax.makeEParser>(<file:envinit.e>.getTwine()).evalToPair(privilegedScope)[1]);
   
   ? def [ic, oc] := makeIsolatedVat("repl-test", [].asMap())
   # value: [<Promise>, <outerController>]
