@@ -3,6 +3,11 @@
 
 def makeInitPool := <import:org.switchb.e.murepl.makeInitPool>
 
+# transport states
+def CONNECTING {}
+def CONNECTED {}
+def DISCONNECTED {}
+
 def makeMurepl(transportDefs :Map[String, any], makeIsolatedVat, trace) {
   var labelCounter := 0
   def makeReplVat := makeInitPool(fn { 
@@ -30,7 +35,18 @@ def makeMurepl(transportDefs :Map[String, any], makeIsolatedVat, trace) {
   def initTransport(transportKey) {
     def maker := transportDefs[transportKey]
     
+    var state := CONNECTING
+    
     def transportFace {
+      to connected() {
+        state := CONNECTED
+      }
+      
+      to disconnected() {
+        state := DISCONNECTED
+        initTransport <- (transportKey)
+      }
+      
       to repl(forumKey) {
         def key := [transportKey, forumKey]
         return repls.fetch(key, fn {

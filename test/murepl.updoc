@@ -11,9 +11,11 @@ useful as dogfooding.
   ? def makeMurepl := <murepl:makeMurepl>
   # value: <makeMurepl>
   
-  ? def mureplFacet
-  > def makeTransport1(bind mureplFacet) {
-  >   
+  ? var mureplFacet := null
+  > def makeTransport1(m) {
+  >   stderr.println("makeTransport1 called")
+  >   mureplFacet := m
+  >   mureplFacet.connected()
   > }
   
   XXX this code is duplicated with isolated-repl.updoc -- see about simplifying or module-izing
@@ -31,6 +33,9 @@ useful as dogfooding.
   
   
   ? def murepl := makeMurepl(["t1" => makeTransport1], makeIsolatedVat, println)
+  # stderr: makeTransport1 called
+  #         
+  
   # value: <murepl>
   
   ? mureplFacet.repl("#foo") <- eval("def x := 1 + 1", "Alice", mkAnswerCollector(def cont))
@@ -52,3 +57,11 @@ useful as dogfooding.
   # stdout: # problem: problem: Failed: Undefined variable: x
   #         
   #         
+
+--- Reconnecting
+
+  ? mureplFacet.disconnected()
+  # stderr: makeTransport1 called
+  #         
+  
+  XXX test backoff/reconnect on connection failure/fast failure
