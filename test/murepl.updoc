@@ -1,0 +1,54 @@
+# Copyright 2011 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Note: This test doesn't really need to use an isolated vat; but it has proven
+useful as dogfooding.
+
+  ? pragma.syntax("0.9")
+  
+  ? interp.setTopScope(<elang:syntax.makeEParser>(<file:envinit.e>.getTwine()).evalToPair(privilegedScope)[1]);
+  
+  ? def makeMurepl := <murepl:makeMurepl>
+  # value: <makeMurepl>
+  
+  ? def mureplFacet
+  > def makeTransport1(bind mureplFacet) {
+  >   
+  > }
+  
+  XXX this code is duplicated with isolated-repl.updoc -- see about simplifying or module-izing
+  ? def answerer := <elang:cmd.makeAnswerer>(stdout)
+  > def makeUnQuote := <elib:oldeio.makeUnQuote>
+  > def mkAnswerCollector(res) {
+  >   return def answerCollector {
+  >     to run(keyword, valueText) {
+  >       answerer.reportValue(keyword, fn t,s { s.print(t) }, valueText)
+  >     }
+  >     to close() { res.resolve(true) }
+  >   }
+  > }
+  
+  
+  
+  ? def murepl := makeMurepl(["t1" => makeTransport1], makeIsolatedVat, println)
+  # value: <murepl>
+  
+  ? mureplFacet.repl("#foo") <- eval("def x := 1 + 1", "Alice", mkAnswerCollector(def cont))
+  > interp.waitAtTop(cont)
+  ?
+  # stdout: # value: 2
+  #         
+  #         
+  
+  ? mureplFacet.repl("#foo") <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
+  > interp.waitAtTop(cont)
+  ?
+  # stdout: # value: 3
+  #         
+  #         
+  ? mureplFacet.repl("#bar") <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
+  > interp.waitAtTop(cont)
+  ?
+  # stdout: # problem: problem: Failed: Undefined variable: x
+  #         
+  #         

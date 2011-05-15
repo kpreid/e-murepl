@@ -1,0 +1,54 @@
+# Copyright 2011 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+def makeInitPool := <import:org.switchb.e.murepl.makeInitPool>
+
+def makeMurepl(transportDefs :Map[String, any], makeIsolatedVat, trace) {
+  var labelCounter := 0
+  def makeReplVat := makeInitPool(fn { 
+    def label := `murepl-${labelCounter += 1}`
+    trace(`Making vat $label`)
+    
+    def [ic, oc] := makeIsolatedVat(label, [].asMap())
+    
+    def repl := ic <- seed(e`fn label {
+      <import:org.switchb.e.murepl.makeRepl>(
+        <unsafe:org.erights.e.elang.scope.makeScope>,
+        ``pragma.syntax("0.9")``,
+        [],
+        [],
+        label
+      )
+    }`) <- (label)
+    
+    repl
+  }, 1)
+  
+  def transports := [].asMap().diverge()
+  def repls := [].asMap().diverge()
+  
+  def initTransport(transportKey) {
+    def maker := transportDefs[transportKey]
+    
+    def transportFace {
+      to repl(forumKey) {
+        def key := [transportKey, forumKey]
+        return repls.fetch(key, fn {
+          repls[key] := makeReplVat()
+        })
+      }
+    }
+    
+    transports[transportKey] := maker(transportFace)
+  }
+  
+  for key => _ in transportDefs {
+    initTransport(key)
+  }
+  
+  def murepl {
+    
+  }
+  
+  return murepl
+}
