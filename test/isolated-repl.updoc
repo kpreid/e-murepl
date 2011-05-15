@@ -1,0 +1,57 @@
+# Copyright 2011 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+Note: This test doesn't really need to use an isolated vat; but it has proven
+useful as dogfooding.
+
+  ? pragma.syntax("0.9")
+  
+  ? interp.setTopScope(<elang:syntax.makeEParser>(<file:murepl.e>.getTwine()).evalToPair(privilegedScope)[1]);
+  
+  ? def [ic, oc] := makeIsolatedVat("repl-test", [].asMap())
+  # value: [<Promise>, <outerController>]
+  
+  ? interp.waitAtTop(def repl := ic <- seed(e`
+  >   <import:org.switchb.e.murepl.makeRepl>(
+  >     <unsafe:org.erights.e.elang.scope.makeScope>,
+  >     ``pragma.syntax("0.9")``,
+  >     [],
+  >     [],
+  >     "isolatedReplTest"
+  >   )
+  > `))
+  
+  ? interp.waitAtTop(def t := repl <- __getAllegedType() <- getFQName())
+  ? t
+  # value: "org.switchb.e.murepl.makeRepl$makeRepl$replController"
+  
+  ? def answerer := <elang:cmd.makeAnswerer>(stdout)
+  > def makeUnQuote := <elib:oldeio.makeUnQuote>
+  > def mkAnswerCollector(res) {
+  >   return def answerCollector {
+  >     to run(keyword, valueText) {
+  >       answerer.reportValue(keyword, fn t,s { s.print(t) }, valueText)
+  >     }
+  >     to close() { res.resolve(true) }
+  >   }
+  > }
+  
+  ? def r := repl <- eval("def x := 1 + 1", "Alice", mkAnswerCollector(def cont))
+  > interp.waitAtTop(cont)
+  ?
+  # stdout: # value: 2
+  #         
+  #         
+
+  ? [r]
+  # value: [null]
+  
+  ? repl <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
+  > interp.waitAtTop(cont)
+  ?
+  # stdout: # value: 3
+  #         
+  #         
+  
+  ? ic <- orderlyShutdown()
+  

@@ -1,0 +1,116 @@
+# Copyright 2004-2011 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+def makeBufferingPair := <elib:oldeio.makeTextWriter>.makeBufferingPair
+def makeEParser := <elang:syntax.makeEParser>
+
+def na() { throw("That operation is not available in this REPL.") }
+
+
+def makeRepl(makeScope, prelude, onceAugmenters, alwaysAugmenters, identifier) {
+  
+  def freshEnv := makeScope.fromState(safeScope.getState(), `murepl.$identifier.`)
+  
+  # Environment to evaluate next expression in
+  var currentEnv := freshEnv
+  
+  # Details of the last problem resulting from an evaluation, available upon request
+  var lastProblemSeen := null
+  
+  # Most recent REPL results
+  def results := [].diverge()
+  
+  def ourInterp {
+    # copied and edited from org/erights/e/elang/cmd/cmdLoopMakerAuthor.emaker:
+    # Copyright 2002 Combex, Inc. under the terms of the MIT X license
+    # found at http://www.opensource.org/licenses/mit-license.html ................
+
+    to blockAtTop() { na() }
+    to continueAtTop() { na() }
+    to waitAtTop(_) { na() }
+    to exitAtTop() { na() }
+    to exitAtTop(_) { na() }
+    to getNextExitStatus() { na() }
+    to getFinalExitStatusVow() { na() }
+    
+    to getArgs()  :any { na() }
+    to getProps() :any { throw("not allowed") }
+
+    to getExpand()          :boolean { return false }
+    to getShowTransformed() :boolean { return false }
+    to getShowJStack()      :boolean { return false }
+    to getShowEStack()      :boolean { return true }
+    to getPrintFunc()          :near { na() }
+    /** the interactive property can't be changed */
+    to getInteractive()     :boolean { return true }
+
+    to setExpand(newFlag)      :void { na() }
+    to setShowTransformed(newFlag) :void {
+        na()
+    }
+    to setShowJStack(newFlag)  :void { na() }
+    to setShowEStack(newFlag)  :void { na() }
+    to setPrintFunc(newPF)     :void { throw("not allowed") }
+
+    to getTopScope()            :any { return currentEnv }
+    to setTopScope(newScope)   :void { throw("not allowed") }
+
+    to getResult(i)             :any { return results[i] }
+
+    to pushResult(result) :void {
+        results(0,0) := [result]
+        if (results.size() > 10) {
+            results.setSize(10)
+        }
+    }
+
+    to gc() :void {
+        results.setSize(0)
+        #systemGC.gc()
+    }
+  }
+  
+  def replController {
+    to eval(eSource :Twine, userID :Data, answers :rcvr) {
+      #traceln(`read! $eSource`)
+      def result := try {
+        def ast := makeEParser.run(prelude + "\n" + eSource) # XXX make sure callers do the asFrom for source info
+        
+        def preparedEnv := currentEnv.nestOuter() # XXX stub, apply augmenters here
+        
+        currentEnv := preparedEnv # note that this is gettable from interp. XXX hazard: what if something closes over interp and gets invoked ?
+        
+        #traceln(`eval! $eSource`)
+
+        def [result, newEnv] := ast.evalToPair(currentEnv)
+        currentEnv := newEnv
+        
+        #traceln(`returning! $eSource`)
+        
+        if (!__equalizer.sameYet(result, null)) {
+          # The result is printed at this point because the possible side-effects of its printing should occur exactly once and at this point.
+          answers <- ("value", E.toQuote(result))
+        }
+        
+        result
+      } catch problemInParseOrEval {
+        answers <- ("problem", problemInParseOrEval) # XXX syntax error reports
+        lastProblemSeen := problemInParseOrEval
+        # XXX review supporting l-p-s-anywhere functionality
+        Ref.broken(problemInParseOrEval)
+      } finally {
+        # XXX stub, deaugment scope here
+      }
+      
+      ourInterp.pushResult(result)
+      
+      answers <- close()
+    }
+    
+    to getLastProblemSeen() {
+      return lastProblemSeen
+    }
+  }
+  
+  return replController
+}
