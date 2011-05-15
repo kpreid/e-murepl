@@ -14,7 +14,7 @@ def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, st
   def makeOutputStreamWriter := <unsafe:java.io.makeOutputStreamWriter>
   
   return def makeIsolatedVat {
-    to run(limits :Map[String, int]) {
+    to run(label :String, limits :Map[String, int]) {
       
       # Convert limits into system ulimit options
       var limitCodes := []
@@ -32,11 +32,11 @@ def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, st
       # SturdyRef to the resolver for bootstrapping communication
       def [bootstrapSR, bootstrapCancel, _] :=
         identityMgr.makeKnown(remoteResolver)
-      def text := introducer.sturdyToURI(bootstrapSR)
+      def bootstrapURL := introducer.sturdyToURI(bootstrapSR)
       
       # Start actual subprocess
       def process := <unsafe:java.lang.makeRuntime>.getRuntime().exec(
-        [limitToolPath] + limitCodes + ["--", classpath, text],
+        [limitToolPath] + limitCodes + ["--", classpath, bootstrapURL, label],
         null,
         null)
 
@@ -59,7 +59,7 @@ def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, st
           if (Ref.isBroken(processExitCodeVow)) {
             processExitCodeVow
           } else {
-            Ref.broken("Isolated vat process unexpectedly terminated")
+            Ref.broken(`Isolated vat $label: process unexpectedly terminated`)
           })
         # process.abort()
       }

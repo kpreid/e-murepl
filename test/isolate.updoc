@@ -7,7 +7,7 @@
 
 --- Test case: eval, orderly shutdown
 
-  ? def [ic, oc] := makeIsolatedVat([].asMap())
+  ? def [ic, oc] := makeIsolatedVat("simple", [].asMap())
   # value: [<Promise>, <outerController>]
 
   ? interp.waitAtTop(ic)
@@ -33,7 +33,7 @@
 
 --- Test case: killing
 
-  ? def [ic, oc] := makeIsolatedVat([].asMap())
+  ? def [ic, oc] := makeIsolatedVat("kill test", [].asMap())
   # value: [<Promise>, <outerController>]
 
   ? def r := ic <- seed(e`while (true) {}`)
@@ -60,7 +60,7 @@ XXX this should work but doesn't:
 
 --- Test case: CPU time expiry
 
-  ? def [ic, oc] := makeIsolatedVat(["cpuSeconds" => 20])
+  ? def [ic, oc] := makeIsolatedVat("cpu time test", ["cpuSeconds" => 20])
   # value: [<Promise>, <outerController>]
 
   ? interp.waitAtTop(ic) # wait for startup to be done

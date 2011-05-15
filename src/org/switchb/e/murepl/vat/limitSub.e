@@ -5,16 +5,19 @@ pragma.syntax("0.9")
 
 def EExpr := <type:org.erights.e.elang.evm.EExpr>
 
-def [bootstrapSturdyText] := interp.getArgs()
-introducer.onTheAir()
-def bootstrapResolver := introducer.sturdyFromURI(bootstrapSturdyText).getRcvr()
+def [bootstrapSturdyText, myName] := interp.getArgs()
+
+# This process ends when 'shutdown' is resolved
+def [shutdown, shutdownResolver] := Ref.promise()
 
 /** This object provides access to the sub-vat */
 def innerController {
   
   to __reactToLostClient(problem) {
-    traceln(`Shutting down due to lost client: $problem`)
-    innerController.orderlyShutdown()
+    if (!Ref.isResolved(shutdown)) {
+      stderr.println(`# Isolated vat $myName: Shutting down due to lost client: $problem`)
+      innerController.orderlyShutdown()
+    }
   }
   
   to seed(expr :EExpr) {
@@ -25,17 +28,21 @@ def innerController {
   }
   
   to orderlyShutdown() {
-    interp.continueAtTop()
+    shutdownResolver.resolveRace(true)
   }
 }
 
+# Establish communication with creator vat.
 {
+  introducer.onTheAir()
+  def bootstrapResolver := introducer.sturdyFromURI(bootstrapSturdyText).getRcvr()
+
   when (bootstrapResolver <- resolve(innerController)) -> {
     #stderr.println("contacted bootstrap resolver")
   } catch p {
-    stderr.println("# limitSub: error from contacting bootstrap resolver")
+    stderr.println(`# Isolated vat $myName: error from contacting bootstrap resolver:`)
     interp.exitAtTop(p)
   }
-
-  interp.blockAtTop()
 }
+
+interp.waitAtTop(shutdown)
