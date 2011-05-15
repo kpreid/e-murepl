@@ -15,8 +15,12 @@ def makeInitPool(make, reserve :(int >= 0)) {
   fillPool()
   
   return def pooledMake() {
-    def [fresh] := pool.removeRun(0, 1) # O(reserve); assuming it's small
-    fillPool()
-    return fresh
+    if (reserve <= 0) {
+      return make()
+    } else {
+      def [fresh] := pool.removeRun(0, 1) # O(reserve); assuming it's small
+      fillPool()
+      return fresh
+    }
   }
 }
