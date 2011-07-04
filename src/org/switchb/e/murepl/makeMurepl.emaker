@@ -10,7 +10,7 @@ def DISCONNECTED {}
 
 def makeMurepl(transportDefs :Map[String, any], makeIsolatedVat, trace) {
   var labelCounter := 0
-  def makeReplVat := makeInitPool(fn { 
+  def makeReplVat := makeInitPool(def _makeReplVat() { 
     def label := `murepl-${labelCounter += 1}`
     trace(`Making vat $label`)
     
@@ -26,7 +26,11 @@ def makeMurepl(transportDefs :Map[String, any], makeIsolatedVat, trace) {
       )
     }`) <- (label)
     
-    repl
+    return def replRecord {
+      to repl() { return repl }
+      to inner() { return ic }
+      to outer() { return oc }
+    }
   }, 1)
   
   def transports := [].asMap().diverge()
@@ -34,24 +38,56 @@ def makeMurepl(transportDefs :Map[String, any], makeIsolatedVat, trace) {
   
   def initTransport(transportKey) {
     def maker := transportDefs[transportKey]
+    def toGlobalKey(forumKey) { 
+      return [transportKey, forumKey]
+    }
     
     var state := CONNECTING
     
     def transportFace {
-      to connected() {
+      /**
+       * Report that the transport has successfully connected (is ready to
+       * receive requests).
+       */
+      to connected() :void {
         state := CONNECTED
       }
       
-      to disconnected() {
+      /**
+       * Report that the transport has disconnected (will be remade and
+       * reinitialized according to the reconnection schedule).
+       */
+      to disconnected() :void {
         state := DISCONNECTED
         initTransport <- (transportKey)
       }
       
-      to repl(forumKey) {
-        def key := [transportKey, forumKey]
+      /**
+       * Return or create the repl for the given forum key. The forum key
+       * is some data which identifies a persistent source of evaluation 
+       * requests, which will all share the same environment.
+       */
+      to repl(forumKey :Data) :rcvr {
+        def key := toGlobalKey(forumKey)
         return repls.fetch(key, fn {
           repls[key] := makeReplVat()
-        })
+        }).repl()
+      }
+
+      /**
+       * Kill the repl for the named forum.
+       *
+       * XXX This interface should distinguish wiping persistent state vs.
+       * killing a hung vat to unwedge.
+       */
+      to reset(forumKey :Data) :void {
+        def key := toGlobalKey(forumKey)
+        if (repls.maps(key)) {
+          # XXX Add and use an orderly-shutdown-or-kill operation, to reduce log noise.
+          def oc := repls[key].outer()
+          repls.removeKey(key)
+          oc.kill()
+        }
       }
     }
     

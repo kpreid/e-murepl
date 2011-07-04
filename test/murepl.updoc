@@ -58,6 +58,17 @@ useful as dogfooding.
   #         
   #         
 
+Deliberate reset; the variable is now undefined:
+
+  ? mureplFacet.reset("#foo")
+  > mureplFacet.repl("#foo") <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
+  > interp.waitAtTop(cont)
+  ?
+  # stdout: # problem: problem: Failed: Undefined variable: x
+  #         
+  #         
+  
+
 --- Reconnecting
 
   ? mureplFacet.disconnected()
