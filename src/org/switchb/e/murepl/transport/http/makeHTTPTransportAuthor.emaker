@@ -1,6 +1,7 @@
 # Copyright 2011 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+def getResourcePath := <import:org.switchb.e.murepl.util.getResourcePath>
 def makeEHttpServlet := <import:org.switchb.e.murepl.transport.http.makeEHttpServlet>
 
 interface Html {}
@@ -32,23 +33,11 @@ def html__quasiParser {
 def pageHeaderTemplate() { return html`
 <html><head>
 <title>MUREPL</title>
+<link rel='stylesheet' href='murepl.css' type='text/css'>
 <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js'></script>
-<script>
-function ajax() {
-  var src = $$('#input').get(0).value;
-  var entry = $$("#out").append("<div><pre>? <span class='input'></span></pre></div>").children().last();
-  entry.find(".input").text(src);
-  var responseHolder = entry.append("<div>...evaluating...</div>").children().last();
-  responseHolder.load('/repl', {src: src, noout: 1}, function (response, status, xhr) {
-    if (status == "error") {
-      responseHolder.html("Error contacting server: " + xhr.status + " " + xhr.statusText);
-    }
-    $$(document.body).scrollTop(responseHolder.position().top - 10);
-  });
-  $$("#input").select();
-}</script>
+<script src='/murepl.js'></script>
 
-</head><body onload='$$("#input").focus()'>
+</head><body onload='murepl_init()'>
 
 <div id='out'>
 `}
@@ -56,7 +45,7 @@ function ajax() {
 def pageFooterTemplate() { return html`
 </div>
 <form action='' onsubmit='ajax(); return false' method='post'>
-  <div style='font-family: monospace; display: table; width: 100%;'>? <span style='display: table-cell;'><input id='input' type='text' name='src' size=80 style='font-family: monospace; width: 100%; border: none; margin: 0; padding: 0'></span>
+  <div class='murepl-prompt-line'>? <span><input id='input' type='text' name='src' size=80 class='murepl-prompt-input'></span>
   </div>
 </form>
 
@@ -64,73 +53,92 @@ def pageFooterTemplate() { return html`
 `}
 
 def makeHTTPTransportAuthor(<unsafe>) {
+  def makeDefaultHandler := <unsafe:org.mortbay.jetty.handler.makeDefaultHandler>
+  def makeResourceHandler := <unsafe:org.mortbay.jetty.handler.makeResourceHandler>
+  def makeHandlerList := <unsafe:org.mortbay.jetty.handler.makeHandlerList>
   def makeServer := <unsafe:org.mortbay.jetty.makeServer>
   def makeServletHolder := <unsafe:org.mortbay.jetty.servlet.makeServletHolder>
   def makeServletContext := <unsafe:org.mortbay.jetty.servlet.makeContext>
   def makeOutputStreamWriter := <unsafe:java.io.makeOutputStreamWriter>
 
+  /** Given the murepl facet, construct the repl servlet. */
+  def makeReplServlet(murepl) {
+    def repl := murepl.repl("web")
+
+    return makeEHttpServlet(def eservlet {
+      to GET(request, response) {
+        traceln("beginning GET")
+        response.setStatus(200)
+        response.setContentType("text/html; charset=utf-8")
+        def s := makeOutputStreamWriter(response.getOutputStream())
+
+        # XXX permit GET evals in fresh environment
+        s."write(String)"(pageHeaderTemplate().asText())
+        s."write(String)"(pageFooterTemplate().asText())
+        s.close()
+        traceln("ending GET")
+      }
+
+      to POST(request, response) {
+        #traceln("beginning with request")
+        response.setStatus(200)
+        response.setContentType("text/html; charset=utf-8")
+        def s := makeOutputStreamWriter(response.getOutputStream())
+
+        def includePage := request.getParameter("noout") != "1"
+
+        if (includePage) {
+          s."write(String)"(pageHeaderTemplate().asText())
+        }
+
+        def done
+        if ((def src := request.getParameter("src")) != null) {
+          s."write(String)"("<pre>")
+          repl <- eval(src, "web user", def answersToChannel {
+            to run(keyword, valueText) {
+              def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+              tw.indent(`# ${" " * keyword.size()}  `).print(valueText)
+              s."write(String)"(html`# $keyword: ${sb.snapshot()}`.asText())
+            }
+            to close() {
+              bind done := true
+              s."write(String)"("</pre>")
+            }
+          })
+        } else {
+          bind done := true
+        }
+
+        return when (done) -> {
+          if (includePage) {
+            s."write(String)"(pageFooterTemplate().asText())
+          }
+          s.close()
+          #traceln("done with request")
+        }
+      }
+    })
+  }
+
   return def makeHTTPTransport(port :(0..!(2**16))) {
     return def connect(murepl) {
       
-      def repl := murepl.repl("web")
-      
       def server := makeServer(port)
 
-      def replServlet := makeEHttpServlet(def eservlet {
-        to GET(request, response) {
-          response.setStatus(200)
-          response.setContentType("text/html; charset=utf-8")
-          def s := makeOutputStreamWriter(response.getOutputStream())
-          
-          # XXX permit GET evals in fresh environment
-          s."write(String)"(pageHeaderTemplate().asText())
-          s."write(String)"(pageFooterTemplate().asText())
-          s.close()
-        }
-        
-        to POST(request, response) {
-          #traceln("beginning with request")
-          response.setStatus(200)
-          response.setContentType("text/html; charset=utf-8")
-          def s := makeOutputStreamWriter(response.getOutputStream())
-          
-          def includePage := request.getParameter("noout") != "1"
-          
-          if (includePage) {
-            s."write(String)"(pageHeaderTemplate().asText())
-          }
-
-          def done
-          if ((def src := request.getParameter("src")) != null) {
-            s."write(String)"("<pre>")
-            repl <- eval(src, "web user", def answersToChannel {
-              to run(keyword, valueText) {
-                def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
-                tw.indent(`# ${" " * keyword.size()}  `).print(valueText)
-                s."write(String)"(html`# $keyword: ${sb.snapshot()}`.asText())
-              }
-              to close() {
-                bind done := true
-                s."write(String)"("</pre>")
-              }
-            })
-          } else {
-            bind done := true
-          }
-          
-          return when (done) -> {
-            if (includePage) {
-              s."write(String)"(pageFooterTemplate().asText())
-            }
-            s.close()
-            #traceln("done with request")
-          }
-        }
-      })
+      def staticPath := getResourcePath(meta.context(), `static/`)
+      def staticFiles := makeResourceHandler()
+      staticFiles.setResourceBase(staticPath)
 
       def servletsContext := makeServletContext(server, "/", makeServletContext.getNO_SESSIONS())
-      servletsContext.addServlet(makeServletHolder(replServlet), "/repl")
+      servletsContext.addServlet(
+        makeServletHolder(makeReplServlet(murepl)), "/repl")
       
+      def handlerList := makeHandlerList()
+      handlerList.setHandlers([
+        staticFiles,
+        servletsContext,
+        makeDefaultHandler()])
+      server.setHandler(handlerList)
       server.start()
     }
   }

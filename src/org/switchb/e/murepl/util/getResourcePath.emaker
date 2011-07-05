@@ -1,0 +1,16 @@
+# Copyright 2011 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+/**
+ * getResourcePath(meta.context(), filename) returns the file system pathname to 
+ * the named file which is in the same directory as the emaker the context is
+ * from.
+ */
+def getResourcePath(context, lookupName) {
+  def `@emakerFQN$$@_` := context.getFQNPrefix()
+  def fqnComponents := emakerFQN.split(".")
+  def fqnOuter := ".".rjoin(fqnComponents(0, fqnComponents.size()-1))
+  def pathPrefix := fqnOuter.replaceAll(".","/")
+  return <resource>[`$pathPrefix/$lookupName`].toURI().getPath()
+}
+

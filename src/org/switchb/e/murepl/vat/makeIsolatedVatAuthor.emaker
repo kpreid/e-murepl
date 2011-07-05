@@ -3,13 +3,11 @@
 
 pragma.syntax("0.9")
 
-def resourcePath(lookupName) {
-  return <resource>[`org/switchb/e/murepl/vat/$lookupName`].toURI().getPath()
-}
+def getResourcePath := <import:org.switchb.e.murepl.util.getResourcePath>
 
 def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
   def classpath := props["java.class.path"]
-  def limitToolPath := resourcePath("limit.sh")
+  def limitToolPath := getResourcePath(meta.context(), "limit.sh")
   def System := <unsafe:java.lang.makeSystem>
   def makeOutputStreamWriter := <unsafe:java.io.makeOutputStreamWriter>
   

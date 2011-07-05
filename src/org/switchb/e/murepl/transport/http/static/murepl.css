@@ -1,0 +1,32 @@
+/* --- Transcript formatting --- */
+
+pre, .murepl-prompt-input {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-family: monospace;
+  font-size: 100%;
+  white-space: pre-wrap;
+}
+
+/* --- REPL/input field formatting --- */
+
+.murepl-prompt-line {
+  /* This is made a table so that we can have the input field fill remaining space. */
+  display: table;
+  font-family: monospace; 
+  width: 100%;
+}
+
+.murepl-prompt-line > * {
+  display: table-cell;
+}
+
+.murepl-prompt-input {
+  /* fill rest of line (enclosing table cell) */
+  width: 100%;
+
+  /* remove all extra space vs. an ordinary text line */
+  border: none;
+  margin: 0;
+  padding: 0;
+}
