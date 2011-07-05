@@ -5,9 +5,11 @@
 
 function ajax() {
   var src = $('#input').get(0).value;
-  var entry = $("#out").append("<div><pre>? <span class='input'></span></pre></div>").children().last();
+  var entry = $("<div><pre>? <span class='input'></span></pre></div>");
+  $('#out').append(entry);
   entry.find(".input").text(src);
-  var responseHolder = entry.append("<div>...evaluating...</div>").children().last();
+  var responseHolder = $("<div>...evaluating...</div>")
+  entry.append(responseHolder);
   responseHolder.load('/repl', {src: src, noout: 1}, function (response, status, xhr) {
     if (status == "error") {
       responseHolder.html("Error contacting server: " + xhr.status + " " + xhr.statusText);
