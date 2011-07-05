@@ -1,0 +1,2 @@
+#!/bin/sh
+./devrun ~/p/e-on-java/src/esrc/scripts/updoc.e "$@"

@@ -1,0 +1,4 @@
+class(safe, "org.switchb.e.murepl.RemoteDeflector",
+      statics(method("deflect(Object, Class)")),
+      methods(method(suppress, "getSpreadUncall()"),
+              method(suppress, "invoke(Object, Method, Object[])")))

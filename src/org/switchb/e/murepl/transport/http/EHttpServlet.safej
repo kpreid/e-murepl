@@ -1,0 +1,3 @@
+class(safe, "org.switchb.e.murepl.transport.http.EHttpServlet",
+      statics(method("run(Object)")),
+      methods())

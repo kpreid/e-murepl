@@ -1,0 +1,137 @@
+# Copyright 2011 Kevin Reid, under the terms of the MIT X license
+# found at http://www.opensource.org/licenses/mit-license.html ................
+
+def makeEHttpServlet := <import:org.switchb.e.murepl.transport.http.makeEHttpServlet>
+
+interface Html {}
+def html__quasiParser {
+  to valueMaker(template) {
+    def strTemplate := simple__quasiParser.valueMaker(template);
+    return def htmlTemplate {
+      to substitute(args) {
+        def escArgs := [].diverge()
+        for arg in args {
+          escArgs.push(if (arg =~ h :Html) {
+            h.asText()
+          } else {
+            E.toString(arg).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;").replaceAll("'", "&apos;")
+          })
+        }
+        def str := strTemplate.substitute(escArgs.snapshot())
+        return def html implements Html {
+          to __printOn(out) {
+            out.print("<html {{{", str, "}}}>")
+          }
+          to asText() { return str }
+        }
+      }
+    }
+  }
+}
+
+def pageHeaderTemplate() { return html`
+<html><head>
+<title>MUREPL</title>
+<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js'></script>
+<script>
+function ajax() {
+  var src = $$('#input').get(0).value;
+  var entry = $$("#out").append("<div><pre>? <span class='input'></span></pre></div>").children().last();
+  entry.find(".input").text(src);
+  var responseHolder = entry.append("<div>...evaluating...</div>").children().last();
+  responseHolder.load('/repl', {src: src, noout: 1}, function (response, status, xhr) {
+    if (status == "error") {
+      responseHolder.html("Error contacting server: " + xhr.status + " " + xhr.statusText);
+    }
+    $$(document.body).scrollTop(responseHolder.position().top - 10);
+  });
+  $$("#input").select();
+}</script>
+
+</head><body onload='$$("#input").focus()'>
+
+<div id='out'>
+`}
+
+def pageFooterTemplate() { return html`
+</div>
+<form action='' onsubmit='ajax(); return false' method='post'>
+  <div style='font-family: monospace; display: table; width: 100%;'>? <span style='display: table-cell;'><input id='input' type='text' name='src' size=80 style='font-family: monospace; width: 100%; border: none; margin: 0; padding: 0'></span>
+  </div>
+</form>
+
+</body></html>
+`}
+
+def makeHTTPTransportAuthor(<unsafe>) {
+  def makeServer := <unsafe:org.mortbay.jetty.makeServer>
+  def makeServletHolder := <unsafe:org.mortbay.jetty.servlet.makeServletHolder>
+  def makeServletContext := <unsafe:org.mortbay.jetty.servlet.makeContext>
+  def makeOutputStreamWriter := <unsafe:java.io.makeOutputStreamWriter>
+
+  return def makeHTTPTransport(port :(0..!(2**16))) {
+    return def connect(murepl) {
+      
+      def repl := murepl.repl("web")
+      
+      def server := makeServer(port)
+
+      def replServlet := makeEHttpServlet(def eservlet {
+        to GET(request, response) {
+          response.setStatus(200)
+          response.setContentType("text/html; charset=utf-8")
+          def s := makeOutputStreamWriter(response.getOutputStream())
+          
+          # XXX permit GET evals in fresh environment
+          s."write(String)"(pageHeaderTemplate().asText())
+          s."write(String)"(pageFooterTemplate().asText())
+          s.close()
+        }
+        
+        to POST(request, response) {
+          #traceln("beginning with request")
+          response.setStatus(200)
+          response.setContentType("text/html; charset=utf-8")
+          def s := makeOutputStreamWriter(response.getOutputStream())
+          
+          def includePage := request.getParameter("noout") != "1"
+          
+          if (includePage) {
+            s."write(String)"(pageHeaderTemplate().asText())
+          }
+
+          def done
+          if ((def src := request.getParameter("src")) != null) {
+            s."write(String)"("<pre>")
+            repl <- eval(src, "web user", def answersToChannel {
+              to run(keyword, valueText) {
+                def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+                tw.indent(`# ${" " * keyword.size()}  `).print(valueText)
+                s."write(String)"(html`# $keyword: ${sb.snapshot()}`.asText())
+              }
+              to close() {
+                bind done := true
+                s."write(String)"("</pre>")
+              }
+            })
+          } else {
+            bind done := true
+          }
+          
+          return when (done) -> {
+            if (includePage) {
+              s."write(String)"(pageFooterTemplate().asText())
+            }
+            s.close()
+            #traceln("done with request")
+          }
+        }
+      })
+
+      def servletsContext := makeServletContext(server, "/", makeServletContext.getNO_SESSIONS())
+      servletsContext.addServlet(makeServletHolder(replServlet), "/repl")
+      
+      server.start()
+    }
+  }
+}
