@@ -1,6 +1,7 @@
 # Copyright 2011 Kevin Reid, under the terms of the MIT X license
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
+def ::"Thunk" := <type:org.erights.e.elib.base.Thunk>
 def makeInitPool := <import:org.switchb.e.murepl.makeInitPool>
 
 # transport states
@@ -8,7 +9,7 @@ def CONNECTING {}
 def CONNECTED {}
 def DISCONNECTED {}
 
-def makeMurepl(transportDefs :Map[String, any], makeIsolatedVat, trace) {
+def makeMurepl(transportDefs :Map[String, ::"Thunk"], makeIsolatedVat, trace) {
   var labelCounter := 0
   def makeReplVat := makeInitPool(def _makeReplVat() { 
     def label := `murepl-${labelCounter += 1}`
