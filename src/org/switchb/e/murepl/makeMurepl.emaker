@@ -9,13 +9,13 @@ def CONNECTING {}
 def CONNECTED {}
 def DISCONNECTED {}
 
-def makeMurepl(transportDefs :Map[String, ::"Thunk"], makeIsolatedVat, trace) {
+def makeMurepl(transportDefs :Map[String, ::"Thunk"], limits, makeIsolatedVat, trace) {
   var labelCounter := 0
   def makeReplVat := makeInitPool(def _makeReplVat() { 
     def label := `murepl-${labelCounter += 1}`
     trace(`Making vat $label`)
     
-    def [ic, oc] := makeIsolatedVat(label, [].asMap())
+    def [ic, oc] := makeIsolatedVat(label, limits)
     
     def repl := ic <- seed(e`fn label {
       <import:org.switchb.e.murepl.makeRepl>(
