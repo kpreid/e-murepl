@@ -1,6 +1,6 @@
 #!/bin/sh
 PATHELEMS=()
-for f in deps/jetty/lib/*.jar; do
+for f in deps/*.jar deps/jetty/lib/*.jar; do
   PATHELEMS+=(-cpa "$f")
 done
 exec devrune -cpa src "${PATHELEMS[@]}" "$@"
