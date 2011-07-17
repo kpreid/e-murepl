@@ -16,6 +16,7 @@ function ajax() {
     }
     $(document.body).scrollTop(responseHolder.position().top - 10);
   });
+  $("#input").get(0).value = "";
   $("#input").select();
 }
 
