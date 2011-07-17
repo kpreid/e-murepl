@@ -1,0 +1,17 @@
+BUGS:
+- Host jQuery locally, rejigger build system to allow built files going into web static directory.
+- Caps put into argv for subrepls leak on multiuser unixes.
+
+FEATURES:
+- Put config in file (maybe have separate password-store hook?), allow config of web listen address and port.
+- Allow multiple web repls -- see how to do PATH_INFOalike w/ servlets.
+- Persistence.
+- Add a circular buffer to the web repl for other people's evals and async output.
+- Long polling for async web output.
+- Port repl features from eel.
+    - printing.
+    - misc libraries.
+    - accumulator etc. default to on.
+- Reset-vat button on web UI.
+
+pragma.enable("accumulator");def diff(s) {return accum [].asMap() for `&@k` => v ? (!safeScope.maps(k) || v != safeScope.getSlot(k)) in s { _.with(k, v) }}
