@@ -2,7 +2,7 @@
 # found at http://www.opensource.org/licenses/mit-license.html ................
 
 def ::"Thunk" := <type:org.erights.e.elib.base.Thunk>
-def makeInitPool := <import:org.switchb.e.murepl.makeInitPool>
+def makeInitPool := <import:org.switchb.e.murepl.util.makeInitPool>
 
 # transport states
 def CONNECTING {}

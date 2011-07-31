@@ -3,7 +3,7 @@
 
   ? pragma.syntax("0.9")
 
-  ? def makeInitPool := <import:org.switchb.e.murepl.makeInitPool>
+  ? def makeInitPool := <import:org.switchb.e.murepl.util.makeInitPool>
   # value: <makeInitPool>
   
   ? var i := 0
