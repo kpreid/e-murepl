@@ -15,3 +15,5 @@ FEATURES:
 - Reset-vat button on web UI.
 
 pragma.enable("accumulator");def diff(s) {return accum [].asMap() for `&@k` => v ? (!safeScope.maps(k) || v != safeScope.getSlot(k)) in s { _.with(k, v) }}
+
+Possibly better Java-subprocess starting: copy java.class.path property from current JVM, use java.home to find java executable: http://stackoverflow.com/questions/1229605/is-this-really-the-best-way-to-start-a-second-jvm-from-java-code
