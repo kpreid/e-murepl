@@ -32,7 +32,7 @@ useful as dogfooding.
   
   
   
-  ? def murepl := makeMurepl(["t1" => makeTransport1], makeIsolatedVat, println)
+  ? def murepl := makeMurepl(["t1" => makeTransport1], [].asMap(), makeIsolatedVat, println)
   # stderr: makeTransport1 called
   #         
   

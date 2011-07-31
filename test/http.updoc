@@ -10,7 +10,7 @@
   
   ? def http := <murepl:transport.http.makeHTTPTransportAuthor>(<unsafe>)(8081)
   
-  ? def murepl := makeMurepl([=> http], makeIsolatedVat, println)
+  ? def murepl := makeMurepl([=> http], [].asMap(), makeIsolatedVat, println)
   
 XXX disabled for now, there seems to be some issue that makes this not work even though the real thing does
   x ? <http://localhost:8081/repl>.getText().contains("<title")
