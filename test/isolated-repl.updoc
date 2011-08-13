@@ -11,6 +11,8 @@ useful as dogfooding.
   ? def [ic, oc] := makeIsolatedVat("repl-test", [].asMap())
   # value: [<Promise>, <outerController>]
   
+  ? def printLog := <import:org.switchb.e.murepl.makeRepl>.makeLogPrinter(stdout)
+  
   ? interp.waitAtTop(def repl := ic <- seed(e`
   >   <import:org.switchb.e.murepl.makeRepl>(
   >     <unsafe:org.erights.e.elang.scope.makeScope>,
@@ -24,34 +26,67 @@ useful as dogfooding.
   ? interp.waitAtTop(def t := repl <- __getAllegedType() <- getFQName())
   ? t
   # value: "org.switchb.e.murepl.makeRepl$makeRepl$replController"
+
+Check that the log exists and is unresolved.
+
+  ? def orderPair := repl <- __order("getLogHead", [])
+  > interp.waitAtTop(orderPair)
+  ? def [var log, _] := orderPair
+  > log
+  # value: <Promise>
   
-  ? def answerer := <elang:cmd.makeAnswerer>(stdout)
-  > def makeUnQuote := <elib:oldeio.makeUnQuote>
-  > def mkAnswerCollector(res) {
-  >   return def answerCollector {
-  >     to run(keyword, valueText) {
-  >       answerer.reportValue(keyword, fn t,s { s.print(t) }, valueText)
-  >     }
-  >     to close() { res.resolve(true) }
-  >   }
-  > }
+Evaluate something.
+
+  ? def r := repl <- eval("def x := 1 + 1", "Alice")
+  > interp.waitAtTop(r)
+
+After the evaluation is done, the log has been updated. (XXX test that the log is updated *before* as well.)
+
+  ? log
+  # value: [["source" => "def x := 1 + 1", "answers" => [["value", "2"], null]], <Promise>]
   
-  ? def r := repl <- eval("def x := 1 + 1", "Alice", mkAnswerCollector(def cont))
-  > interp.waitAtTop(cont)
-  ?
+  ? def n := printLog(log, null)
   # stdout: # value: 2
   #         
   #         
-
-  ? [r]
-  # value: [null]
   
-  ? repl <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
-  > interp.waitAtTop(cont)
-  ?
+The results of eval/2 are the log pointers from before and after the eval.
+  
+  ? r
+  # value: [[["source" => "def x := 1 + 1", "answers" => [["value", "2"], null]], <Promise>], <Promise>]
+  
+TODO: Should these pass? Is this showing a CapTP bug?
+  x ? __equalizer.sameYet(log, r[0])
+  x # value: true
+  x 
+  x ? __equalizer.sameYet(log[1], r[1])
+  x # value: true
+  
+  ? log := n  # advance log pointer
+  
+Testing persistence of variables.
+  
+  ? def r := repl <- eval("x + 1", "Bob")
+  > interp.waitAtTop(r)
+
+  ? log := printLog(r[0], null)
   # stdout: # value: 3
   #         
   #         
+
+Regression test: If the value was null, the answers log would not be resolved.
+
+  ? def r := repl <- eval("null", "Alice")
+  > interp.waitAtTop(r)
+
+  ? r[0][0]
+  # value: ["source" => "null", "answers" => null]
+
+  ? log := printLog(r[0], null)
+  > print("expect no text but this")
+  # stdout: expect no text but this
+
+Clean up.
   
   ? ic <- orderlyShutdown()
   

@@ -18,17 +18,7 @@ useful as dogfooding.
   >   mureplFacet.connected()
   > }
   
-  XXX this code is duplicated with isolated-repl.updoc -- see about simplifying or module-izing
-  ? def answerer := <elang:cmd.makeAnswerer>(stdout)
-  > def makeUnQuote := <elib:oldeio.makeUnQuote>
-  > def mkAnswerCollector(res) {
-  >   return def answerCollector {
-  >     to run(keyword, valueText) {
-  >       answerer.reportValue(keyword, fn t,s { s.print(t) }, valueText)
-  >     }
-  >     to close() { res.resolve(true) }
-  >   }
-  > }
+  ? def printLog := <import:org.switchb.e.murepl.makeRepl>.makeLogPrinter(stdout)  
   
   
   
@@ -38,22 +28,22 @@ useful as dogfooding.
   
   # value: <murepl>
   
-  ? mureplFacet.repl("#foo") <- eval("def x := 1 + 1", "Alice", mkAnswerCollector(def cont))
-  > interp.waitAtTop(cont)
-  ?
+  ? def r := mureplFacet.repl("#foo") <- eval("def x := 1 + 1", "Alice")
+  > interp.waitAtTop(r)
+  ? printLog(r[0], r[1])
   # stdout: # value: 2
   #         
   #         
   
-  ? mureplFacet.repl("#foo") <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
-  > interp.waitAtTop(cont)
-  ?
+  ? def r := mureplFacet.repl("#foo") <- eval("x + 1", "Bob")
+  > interp.waitAtTop(r)
+  ? printLog(r[0], r[1])
   # stdout: # value: 3
   #         
   #         
-  ? mureplFacet.repl("#bar") <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
-  > interp.waitAtTop(cont)
-  ?
+  ? def r := mureplFacet.repl("#bar") <- eval("x + 1", "Bob")
+  > interp.waitAtTop(r)
+  ? printLog(r[0], r[1])
   # stdout: # problem: problem: Failed: Undefined variable: x
   #         
   #         
@@ -61,9 +51,9 @@ useful as dogfooding.
 Deliberate reset; the variable is now undefined:
 
   ? mureplFacet.reset("#foo")
-  > mureplFacet.repl("#foo") <- eval("x + 1", "Bob", mkAnswerCollector(def cont))
-  > interp.waitAtTop(cont)
-  ?
+  > def r := mureplFacet.repl("#foo") <- eval("x + 1", "Bob")
+  > interp.waitAtTop(r)
+  ? printLog(r[0], r[1])
   # stdout: # problem: problem: Failed: Undefined variable: x
   #         
   #         

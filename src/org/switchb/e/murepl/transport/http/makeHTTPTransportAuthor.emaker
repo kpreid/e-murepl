@@ -3,6 +3,7 @@
 
 def getResourcePath := <import:org.switchb.e.murepl.util.getResourcePath>
 def makeEHttpServlet := <import:org.switchb.e.murepl.transport.http.makeEHttpServlet>
+def makeRepl := <import:org.switchb.e.murepl.makeRepl>
 
 interface Html {}
 def html__quasiParser {
@@ -94,17 +95,20 @@ def makeHTTPTransportAuthor(<unsafe>) {
         def done
         if ((def src := request.getParameter("src")) != null) {
           s."write(String)"("<pre>")
-          repl <- eval(src, "web user", def answersToChannel {
-            to run(keyword, valueText) {
-              def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
-              tw.indent(`# ${" " * keyword.size()}  `).print(valueText)
-              s."write(String)"(html`# $keyword: ${sb.snapshot()}`.asText())
-            }
-            to close() {
-              bind done := true
-              s."write(String)"("</pre>")
-            }
-          })
+          def logmarks := repl <- eval(src, "web user")
+          when (logmarks) -> {
+            def [var log, tail] := logmarks
+            
+            # TODO: We could skip this string buffer if we had a Writer
+            # adapter which HTML-escaped.
+            def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+            makeRepl.makeLogPrinter(tw)(log, tail)
+            s."write(String)"(html`${sb.snapshot()}`.asText())
+          } catch p {
+            throw(p)
+          } finally {
+            bind done := true
+          }
         } else {
           bind done := true
         }
