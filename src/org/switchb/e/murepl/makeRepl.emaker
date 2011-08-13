@@ -27,6 +27,9 @@ def makeRepl {
 
         def [=> source, => var answers] := entry
         
+        # TODO: Print source with >s
+        out.print("? ", source, "\n")
+        
         while (answers =~ [[keyword, valueText], tail]) {
           answerer.reportValue(keyword, fn t,s { s.print(t) }, valueText)
           answers := tail

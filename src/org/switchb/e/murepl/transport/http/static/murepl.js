@@ -5,15 +5,24 @@
 
 function ajax() {
   var src = $('#input').get(0).value;
-  var entry = $("<div><pre>? <span class='input'></span></pre></div>");
-  $('#out').append(entry);
-  entry.find(".input").text(src);
-  var responseHolder = $("<div>...evaluating...</div>")
-  entry.append(responseHolder);
-  responseHolder.load('/repl', {src: src, noout: 1}, function (response, status, xhr) {
+
+  var responseHolder = $("<div><pre>? <span class='input'></span></pre><div>...evaluating...</div></div>")
+  responseHolder.find(".input").text(src);
+  $('#out').append(responseHolder);
+  
+  responseHolder.load('/repl', {
+    src: src, 
+    noout: 1, 
+    log: $('#form input[name="log"]').val()
+  }, function (response, status, xhr) {
     if (status == "error") {
       responseHolder.html("Error contacting server: " + xhr.status + " " + xhr.statusText);
     }
+    
+    // grab logmark data supplied by server to use on next request
+    $('#form input[name="log"]').remove();
+    $('#form').append($('#logmark input'));
+    
     $(document.body).scrollTop(responseHolder.position().top - 10);
   });
   $("#input").get(0).value = "";

@@ -43,9 +43,10 @@ def pageHeaderTemplate() { return html`
 <div id='out'>
 `}
 
-def pageFooterTemplate() { return html`
+def pageFooterTemplate(logmarkKey) { return html`
 </div>
-<form action='' onsubmit='ajax(); return false' method='post'>
+<form id='form' action='' onsubmit='ajax(); return false' method='post'>
+  <input type='hidden' name='log' value='$logmarkKey'>
   <div class='murepl-prompt-line'>? <span><input id='input' type='text' name='src' size=80 class='murepl-prompt-input'></span>
   </div>
 </form>
@@ -65,6 +66,11 @@ def makeHTTPTransportAuthor(<unsafe>) {
   /** Given the murepl facet, construct the repl servlet. */
   def makeReplServlet(murepl) {
     def repl := murepl.repl("web")
+    def head := repl <- getLogHead()
+
+    # TODO: this is un-persistent state...
+    var logmarkKeyCounter := 0
+    def logmarks := [0 => head].diverge()
 
     return makeEHttpServlet(def eservlet {
       to GET(request, response) {
@@ -73,9 +79,10 @@ def makeHTTPTransportAuthor(<unsafe>) {
         response.setContentType("text/html; charset=utf-8")
         def s := makeOutputStreamWriter(response.getOutputStream())
 
-        # XXX permit GET evals in fresh environment
+        # TODO: permit GET evals in fresh environment
+        # TODO: Print the log now.
         s."write(String)"(pageHeaderTemplate().asText())
-        s."write(String)"(pageFooterTemplate().asText())
+        s."write(String)"(pageFooterTemplate(0).asText())
         s.close()
         traceln("ending GET")
       }
@@ -87,6 +94,12 @@ def makeHTTPTransportAuthor(<unsafe>) {
         def s := makeOutputStreamWriter(response.getOutputStream())
 
         def includePage := request.getParameter("noout") != "1"
+        
+        var logmark := if (request.getParameter("log") != null) {
+          logmarks[__makeInt(request.getParameter("log"))]
+        } else {
+          head
+        }
 
         if (includePage) {
           s."write(String)"(pageHeaderTemplate().asText())
@@ -94,28 +107,35 @@ def makeHTTPTransportAuthor(<unsafe>) {
 
         def done
         if ((def src := request.getParameter("src")) != null) {
-          s."write(String)"("<pre>")
-          def logmarks := repl <- eval(src, "web user")
-          when (logmarks) -> {
-            def [var log, tail] := logmarks
-            
-            # TODO: We could skip this string buffer if we had a Writer
-            # adapter which HTML-escaped.
-            def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
-            makeRepl.makeLogPrinter(tw)(log, tail)
-            s."write(String)"(html`${sb.snapshot()}`.asText())
-          } catch p {
-            throw(p)
-          } finally {
+          when (repl <- eval(src, "web user")) -> {
             bind done := true
           }
         } else {
           bind done := true
         }
+        
+        def slk
+        
+        def done2
+        when (done) -> {
+          # TODO: We could skip this string buffer if we had a Writer
+          # adapter which HTML-escaped.
+          def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+          def stopped := makeRepl.makeLogPrinter(tw)(logmark, null)
+          logmarks[bind slk := logmarkKeyCounter += 1] := stopped
+          s."write(String)"(html`
+            <pre>${sb.snapshot()}</pre>
+            <form id="logmark"><input type="hidden" name="log" value="$slk"></form>
+          `.asText())
+        } catch p {
+          throw(p)
+        } finally {
+          bind done2 := true
+        }
 
-        return when (done) -> {
+        return when (done2) -> {
           if (includePage) {
-            s."write(String)"(pageFooterTemplate().asText())
+            s."write(String)"(pageFooterTemplate(slk).asText())
           }
           s.close()
           #traceln("done with request")
