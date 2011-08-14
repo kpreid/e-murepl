@@ -31,20 +31,23 @@ useful as dogfooding.
   ? def r := mureplFacet.repl("#foo") <- eval("def x := 1 + 1", "Alice")
   > interp.waitAtTop(r)
   ? printLog(r[0], r[1])
-  # stdout: # value: 2
+  # stdout: ? def x := 1 + 1
+  #         # value: 2
   #         
   #         
   
   ? def r := mureplFacet.repl("#foo") <- eval("x + 1", "Bob")
   > interp.waitAtTop(r)
   ? printLog(r[0], r[1])
-  # stdout: # value: 3
+  # stdout: ? x + 1
+  #         # value: 3
   #         
   #         
   ? def r := mureplFacet.repl("#bar") <- eval("x + 1", "Bob")
   > interp.waitAtTop(r)
   ? printLog(r[0], r[1])
-  # stdout: # problem: problem: Failed: Undefined variable: x
+  # stdout: ? x + 1
+  #         # problem: problem: Failed: Undefined variable: x
   #         
   #         
 
@@ -54,7 +57,8 @@ Deliberate reset; the variable is now undefined:
   > def r := mureplFacet.repl("#foo") <- eval("x + 1", "Bob")
   > interp.waitAtTop(r)
   ? printLog(r[0], r[1])
-  # stdout: # problem: problem: Failed: Undefined variable: x
+  # stdout: ? x + 1
+  #         # problem: problem: Failed: Undefined variable: x
   #         
   #         
   

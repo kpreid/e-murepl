@@ -46,7 +46,8 @@ After the evaluation is done, the log has been updated. (XXX test that the log i
   # value: [["source" => "def x := 1 + 1", "answers" => [["value", "2"], null]], <Promise>]
   
   ? def n := printLog(log, null)
-  # stdout: # value: 2
+  # stdout: ? def x := 1 + 1
+  #         # value: 2
   #         
   #         
   
@@ -70,7 +71,8 @@ Testing persistence of variables.
   > interp.waitAtTop(r)
 
   ? log := printLog(r[0], null)
-  # stdout: # value: 3
+  # stdout: ? x + 1
+  #         # value: 3
   #         
   #         
 
@@ -83,8 +85,8 @@ Regression test: If the value was null, the answers log would not be resolved.
   # value: ["source" => "null", "answers" => null]
 
   ? log := printLog(r[0], null)
-  > print("expect no text but this")
-  # stdout: expect no text but this
+  # stdout: ? null
+  #         
 
 Clean up.
   
