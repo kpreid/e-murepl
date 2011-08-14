@@ -24,7 +24,7 @@ def http := {
   makeHTTPTransport(8012)
 }
 
-def limits := ["cpuSeconds" => 25]
+def limits := ["cpuSeconds" => 120]
 
 def murepl := makeMurepl([=> http], limits, makeIsolatedVat, println)
   
