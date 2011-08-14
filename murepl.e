@@ -11,9 +11,13 @@ def seedVat := <elang:interp.seedVatAuthor>(<unsafe>)
 
 def <murepl> := <import:org.switchb.e.murepl.*>
 
-def makeIsolatedVat := <murepl:vat.makeIsolatedVatAuthor>(<unsafe>, interp.getProps(), <unsafe:java.lang.makeRuntime>, introducer, identityMgr, stdout, stderr, seedVat)
-
+def makeLogger := <murepl:util.makeLogger>
 def makeMurepl := <murepl:makeMurepl>
+
+def runtime := <unsafe:java.lang.makeRuntime>.getRuntime()
+def rootLogger := makeLogger.makeStandardLogger(stderr, timer, runtime)
+
+def makeIsolatedVat := <murepl:vat.makeIsolatedVatAuthor>(<unsafe>, interp.getProps(), <unsafe:java.lang.makeRuntime>, introducer, identityMgr, stdout, stderr, seedVat, rootLogger)
 
 #def makeIRCTransport := <murepl:transport.makeIRCTransport>  
 #def irc := makeIRCTransport(<unsafe:makeEPircBot>, "chat.freenode.net", "eel`", null, ["#erights"].asSet(), ["channelsUsingEvalShorthand" => "#erights"], traceln)
@@ -26,7 +30,7 @@ def http := {
 
 def limits := ["cpuSeconds" => 120]
 
-def murepl := makeMurepl([=> http], limits, makeIsolatedVat, println)
+def murepl := makeMurepl([=> http], limits, makeIsolatedVat, rootLogger.nest("murepl"))
   
-stderr.println("murepl.e: done init!")
+rootLogger.nest("murepl.e")("done init!")
 interp.blockAtTop()

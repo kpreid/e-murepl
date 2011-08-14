@@ -5,6 +5,8 @@
 
 # Usage: limit.sh [-l <ulimit option> <ulimit value>]* -- <classpath> <limitSub args>
 
+# echo 'limit.sh started' 2>&1
+
 while [ "X$1" = 'X-l' ]; do
   ulimit "$2" "$3"
   shift; shift; shift
@@ -18,4 +20,6 @@ shift
 
 classpath=$1
 shift
+
+# echo 'limit.sh exec' java -classpath "$classpath" -De.onErrorExit=report org.erights.e.elang.interp.Rune `dirname $0`/limitSub.e "$@" 2>&1
 exec java -classpath "$classpath" -De.onErrorExit=report org.erights.e.elang.interp.Rune `dirname $0`/limitSub.e "$@"

@@ -5,7 +5,7 @@ pragma.syntax("0.9")
 
 def getResourcePath := <import:org.switchb.e.murepl.util.getResourcePath>
 
-def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, stdout, stderr, seedVat) {
+def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, stdout, stderr, seedVat, logger) {
   def classpath := props["java.class.path"]
   def limitToolPath := getResourcePath(meta.context(), "limit.sh")
   def System := <unsafe:java.lang.makeSystem>
@@ -55,11 +55,12 @@ def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, st
           bootstrapCancel()
           tvat.orderlyShutdown("job done")
           remoteResolver.resolveRace(
-            if (Ref.isBroken(processExitCodeVow)) {
+            def desc := if (Ref.isBroken(processExitCodeVow)) {
               processExitCodeVow
             } else {
               Ref.broken(`Isolated vat $label: process unexpectedly terminated`)
             })
+          logger(`Isolated vat $label exited: $desc`)
           # process.abort()
         } catch p {
           # Without this catch block, failures would go only to the ignored

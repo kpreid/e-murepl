@@ -3,26 +3,34 @@
 
 pragma.syntax("0.9")
 
+# stderr.println("limitSub.e started")
+
+def <murepl> := <import:org.switchb.e.murepl.*>
+
 def EExpr := <type:org.erights.e.elang.evm.EExpr>
+def makeLogger := <murepl:util.makeLogger>
+def runtime := <unsafe:java.lang.makeRuntime>.getRuntime()
 
 def [bootstrapSturdyText, myName] := interp.getArgs()
 
 # This process ends when 'shutdown' is resolved
 def [shutdown, shutdownResolver] := Ref.promise()
 
+def rootLogger := makeLogger.makeStandardLogger(stderr, timer, runtime).nest(myName)
+
 /** This object provides access to the sub-vat */
 def innerController {
   
   to __reactToLostClient(problem) {
     if (!Ref.isResolved(shutdown)) {
-      stderr.println(`# Isolated vat $myName: Shutting down due to lost client: $problem`)
+      rootLogger(`Shutting down due to lost client: $problem`)
       innerController.orderlyShutdown()
     }
   }
   
   to seed(expr :EExpr) {
     #stderr.println(`seed $expr`)
-    def r := expr.eval(privilegedScope)
+    def r := expr.eval(privilegedScope.with("logger", rootLogger))
     #stderr.println("done seed")
     return r
   }
@@ -38,11 +46,12 @@ def innerController {
   def bootstrapResolver := introducer.sturdyFromURI(bootstrapSturdyText).getRcvr()
 
   when (bootstrapResolver <- resolve(innerController)) -> {
-    #stderr.println("contacted bootstrap resolver")
+    rootLogger("contacted bootstrap resolver")
   } catch p {
-    stderr.println(`# Isolated vat $myName: error from contacting bootstrap resolver:`)
+    rootLogger(`error from contacting bootstrap resolver:`)
     interp.exitAtTop(p)
   }
 }
 
+rootLogger("Isolated vat ready")
 interp.waitAtTop(shutdown)
