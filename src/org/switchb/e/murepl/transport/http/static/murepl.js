@@ -10,7 +10,7 @@ function ajax() {
   responseHolder.find(".input").text(src);
   $('#out').append(responseHolder);
   
-  responseHolder.load('/repl', {
+  responseHolder.load('repl', {
     src: src, 
     noout: 1, 
     log: $('#form input[name="log"]').val()
