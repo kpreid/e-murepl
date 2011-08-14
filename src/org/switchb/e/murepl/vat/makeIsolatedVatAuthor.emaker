@@ -49,17 +49,24 @@ def makeIsolatedVatAuthor(<unsafe>, props, jRuntime, introducer, identityMgr, st
       
       # Clean up upon process shutdown
       when (processExitCodeVow) -> {} catch _ {} finally {
-        rawStderr.flush()
-        rawStdout.flush()
-        bootstrapCancel()
-        tvat.orderlyShutdown()
-        remoteResolver.resolveRace(
-          if (Ref.isBroken(processExitCodeVow)) {
-            processExitCodeVow
-          } else {
-            Ref.broken(`Isolated vat $label: process unexpectedly terminated`)
-          })
-        # process.abort()
+        try {
+          rawStderr.flush()
+          rawStdout.flush()
+          bootstrapCancel()
+          tvat.orderlyShutdown("job done")
+          remoteResolver.resolveRace(
+            if (Ref.isBroken(processExitCodeVow)) {
+              processExitCodeVow
+            } else {
+              Ref.broken(`Isolated vat $label: process unexpectedly terminated`)
+            })
+          # process.abort()
+        } catch p {
+          # Without this catch block, failures would go only to the ignored
+          # when-block return. Not that this should fail.
+          remoteResolver <- resolveRace(p)
+          throw <- (p)
+        }
       }
       
       # Revoke bootstrap sturdyref as soon as it has been used

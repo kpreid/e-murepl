@@ -71,7 +71,13 @@ def makeMurepl(transportDefs :Map[String, ::"Thunk"], limits, makeIsolatedVat, t
       to repl(forumKey :Data) :rcvr {
         def key := toGlobalKey(forumKey)
         return repls.fetch(key, fn {
-          repls[key] := makeReplVat()
+          def replRecord := makeReplVat()
+          repls[key] := replRecord
+          Ref.whenBroken(replRecord.repl(), fn broken {
+            traceln(`Repl $key broke!: ${Ref.optProblem(broken)}`)
+            transportFace.reset(forumKey)
+          })
+          replRecord
         }).repl()
       }
 
