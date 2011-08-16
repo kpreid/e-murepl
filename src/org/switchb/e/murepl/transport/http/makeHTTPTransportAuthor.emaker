@@ -74,25 +74,13 @@ def makeHTTPTransportAuthor(<unsafe>) {
 
     return makeEHttpServlet(def eservlet {
       to GET(request, response) {
-        traceln("beginning GET")
         response.setStatus(200)
         response.setContentType("text/html; charset=utf-8")
         def s := makeOutputStreamWriter(response.getOutputStream())
 
         # TODO: permit GET evals in fresh environment
-        # TODO: Print the log now.
-        s."write(String)"(pageHeaderTemplate().asText())
-        s."write(String)"(pageFooterTemplate(0).asText())
-        s.close()
-        traceln("ending GET")
-      }
-
-      to POST(request, response) {
-        #traceln("beginning with request")
-        response.setStatus(200)
-        response.setContentType("text/html; charset=utf-8")
-        def s := makeOutputStreamWriter(response.getOutputStream())
-
+        # (Or at least complain explicitly if there's a src= parameter)
+        
         def includePage := request.getParameter("noout") != "1"
         
         var logmark := if (request.getParameter("log") != null) {
@@ -105,6 +93,25 @@ def makeHTTPTransportAuthor(<unsafe>) {
           s."write(String)"(pageHeaderTemplate().asText())
         }
 
+        def slk
+        
+        # TODO: We could skip this string buffer if we had a Writer
+        # adapter which HTML-escaped.
+        def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+        def stopped := makeRepl.makeLogPrinter(tw)(logmark, null)
+        logmarks[bind slk := logmarkKeyCounter += 1] := stopped
+        s."write(String)"(html`<pre>${sb.snapshot()}</pre>`.asText())
+
+        if (includePage) {
+          s."write(String)"(pageFooterTemplate(slk).asText())
+        } else {
+          # This embedded info is used by murepl.js to update the log pointer in the form.
+          s."write(String)"(html`<form id="logmark"><input type="hidden" name="log" value="$slk"></form>`.asText())
+        }
+        s.close()
+      }
+
+      to POST(request, response) {
         def done
         if ((def src := request.getParameter("src")) != null) {
           when (repl <- eval(src, "web user")) -> {
@@ -114,32 +121,7 @@ def makeHTTPTransportAuthor(<unsafe>) {
           bind done := true
         }
         
-        def slk
-        
-        def done2
-        when (done) -> {
-          # TODO: We could skip this string buffer if we had a Writer
-          # adapter which HTML-escaped.
-          def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
-          def stopped := makeRepl.makeLogPrinter(tw)(logmark, null)
-          logmarks[bind slk := logmarkKeyCounter += 1] := stopped
-          s."write(String)"(html`
-            <pre>${sb.snapshot()}</pre>
-            <form id="logmark"><input type="hidden" name="log" value="$slk"></form>
-          `.asText())
-        } catch p {
-          throw(p)
-        } finally {
-          bind done2 := true
-        }
-
-        return when (done2) -> {
-          if (includePage) {
-            s."write(String)"(pageFooterTemplate(slk).asText())
-          }
-          s.close()
-          #traceln("done with request")
-        }
+        return when (done) -> { eservlet.GET(request, response) }
       }
     })
   }
