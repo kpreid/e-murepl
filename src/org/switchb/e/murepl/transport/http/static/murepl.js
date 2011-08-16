@@ -10,7 +10,7 @@ function ajax() {
   responseHolder.find(".input").text(src);
   $('#out').append(responseHolder);
   
-  responseHolder.load('repl', {
+  responseHolder.load('', {
     src: src, 
     noout: 1, 
     log: $('#form input[name="log"]').val()
@@ -22,6 +22,7 @@ function ajax() {
     // grab logmark data supplied by server to use on next request
     $('#form input[name="log"]').remove();
     $('#form').append($('#logmark input'));
+    $('#logmark').remove();
     
     $(document.body).scrollTop(responseHolder.position().top - 10);
   });

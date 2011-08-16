@@ -34,9 +34,9 @@ def html__quasiParser {
 def pageHeaderTemplate() { return html`
 <html><head>
 <title>MUREPL</title>
-<link rel='stylesheet' href='murepl.css' type='text/css'>
+<link rel='stylesheet' href='../murepl.css' type='text/css'>
 <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js'></script>
-<script src='murepl.js'></script>
+<script src='../murepl.js'></script>
 
 </head><body onload='murepl_init()'>
 
@@ -65,15 +65,44 @@ def makeHTTPTransportAuthor(<unsafe>) {
 
   /** Given the murepl facet, construct the repl servlet. */
   def makeReplServlet(murepl) {
-    def repl := murepl.repl("web")
-    def head := repl <- getLogHead()
 
-    # TODO: this is un-persistent state...
-    var logmarkKeyCounter := 0
-    def logmarks := [0 => head].diverge()
+    # Map from REPL key to specific state for it.
+    def replInfos := [].asMap().diverge()
+    
+    def initRepl(name :String) {
+      def repl := murepl.repl(name)
+      def head := repl <- getLogHead()
+
+      # TODO: this is un-persistent state. Which can be reconstructed at O(n) cost and so shold be.
+      var logmarkKeyCounter := 0
+      def logmarks := [0 => head].diverge()
+    
+      return replInfos[name] := [=> repl, => head, => logmarks, => &logmarkKeyCounter]
+    }
+    
+    initRepl("1")
+
+    # --- servlet definition ---
+    
+    def getReplInfo(request, response, ej) {
+      # TODO: URI-unescaping, preferably by quasi-parser
+      def `/@replName` := request.getPathInfo()
+      
+      return replInfos.fetch(replName, fn {
+        response.setStatus(404)
+        response.setContentType("text/plain; charset=utf-8")
+        def s := makeOutputStreamWriter(response.getOutputStream())
+        s."write(String)"(`There is no web REPL named $replName.`)
+        s.close()
+        ej(null)
+      })
+    }
 
     return makeEHttpServlet(def eservlet {
       to GET(request, response) {
+        def [=> repl, => head, => logmarks, => &logmarkKeyCounter] :=
+          getReplInfo(request, response, __return)
+        
         response.setStatus(200)
         response.setContentType("text/html; charset=utf-8")
         def s := makeOutputStreamWriter(response.getOutputStream())
@@ -94,34 +123,35 @@ def makeHTTPTransportAuthor(<unsafe>) {
         }
 
         def slk
+      
+        {
+          # TODO: We could skip this string buffer if we had a Writer
+          # adapter which HTML-escaped.
+          def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+          def stopped := makeRepl.makeLogPrinter(tw)(logmark, null)
+          logmarks[bind slk := logmarkKeyCounter += 1] := stopped
         
-        # TODO: We could skip this string buffer if we had a Writer
-        # adapter which HTML-escaped.
-        def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
-        def stopped := makeRepl.makeLogPrinter(tw)(logmark, null)
-        logmarks[bind slk := logmarkKeyCounter += 1] := stopped
-        s."write(String)"(html`<pre>${sb.snapshot()}</pre>`.asText())
+          s."write(String)"(html`<pre>${sb.snapshot()}</pre>`.asText())
+        }
 
         if (includePage) {
           s."write(String)"(pageFooterTemplate(slk).asText())
         } else {
           # This embedded info is used by murepl.js to update the log pointer in the form.
-          s."write(String)"(html`<form id="logmark"><input type="hidden" name="log" value="$slk"></form>`.asText())
+          s."write(String)"(html`<form id="logmark" style="display: none;"><input type="hidden" name="log" value="$slk"></form>`.asText())
         }
         s.close()
       }
 
       to POST(request, response) {
-        def done
-        if ((def src := request.getParameter("src")) != null) {
-          when (repl <- eval(src, "web user")) -> {
-            bind done := true
-          }
-        } else {
-          bind done := true
-        }
+        def [=> repl, => head, => logmarks, => &logmarkKeyCounter] :=
+          getReplInfo(request, response, __return)
         
-        return when (done) -> { eservlet.GET(request, response) }
+        return when (
+          if ((def src := request.getParameter("src")) != null) {
+            repl <- eval(src, "web user")
+          }
+        ) -> { eservlet.GET(request, response) }
       }
     })
   }
@@ -137,7 +167,7 @@ def makeHTTPTransportAuthor(<unsafe>) {
 
       def servletsContext := makeServletContext(server, "/", makeServletContext.getNO_SESSIONS())
       servletsContext.addServlet(
-        makeServletHolder(makeReplServlet(murepl)), "/repl")
+        makeServletHolder(makeReplServlet(murepl)), "/repl/*")
       
       def handlerList := makeHandlerList()
       handlerList.setHandlers([
