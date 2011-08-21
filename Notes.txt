@@ -3,9 +3,7 @@ BUGS:
 
 FEATURES:
 - Put config in file (maybe have separate password-store hook?), allow config of web listen address and port.
-- Allow multiple web repls -- see how to do PATH_INFOalike w/ servlets.
-- Persistence.
-- Add support for printing the entire log to the web repl for context evals.
+- Persistence of repl state.
 - Long polling for async web output.
 - Port repl features from eel.
     - printing.
