@@ -50,7 +50,7 @@ def pageFooterTemplate(logmarkKey) { return html`
   <div class='murepl-prompt-line'>? <span><input id='input' type='text' name='src' size=80 class='murepl-prompt-input'></span>
   </div>
 </form>
-
+<div class="widget" id="netstatus">Not loaded</div>
 </body></html>
 `}
 
@@ -102,7 +102,23 @@ def makeHTTPTransportAuthor(<unsafe>) {
       to GET(request, response) {
         def [=> repl, => head, => logmarks, => &logmarkKeyCounter] :=
           getReplInfo(request, response, __return)
+
+        # should be one of: "page", "log", "none"
+        def outputType := {
+          def r := request.getParameter("output")
+          if (r != null) { r } else { "page" }
+        }
+        def includePage := outputType <=> "page"
         
+        var logmark := if (request.getParameter("log") != null) {
+          def key := __makeInt(request.getParameter("log"))
+          # A too-high value is converted to being the current tail
+          # TODO: If we get such a value, this usually means the client is ahead of the server (the server has been reset); we should be able to tell the client to clear the view or insert a marker.
+          logmarks.fetch(key, fn { logmarks[logmarkKeyCounter] })
+        } else {
+          head
+        }
+
         response.setStatus(200)
         response.setContentType("text/html; charset=utf-8")
         def s := makeOutputStreamWriter(response.getOutputStream())
@@ -110,37 +126,41 @@ def makeHTTPTransportAuthor(<unsafe>) {
         # TODO: permit GET evals in fresh environment
         # (Or at least complain explicitly if there's a src= parameter)
         
-        def includePage := request.getParameter("noout") != "1"
-        
-        var logmark := if (request.getParameter("log") != null) {
-          logmarks[__makeInt(request.getParameter("log"))]
-        } else {
-          head
-        }
-
         if (includePage) {
           s."write(String)"(pageHeaderTemplate().asText())
         }
 
-        def slk
-      
-        {
-          # TODO: We could skip this string buffer if we had a Writer
-          # adapter which HTML-escaped.
-          def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
-          def stopped := makeRepl.makeLogPrinter(tw)(logmark, null)
-          logmarks[bind slk := logmarkKeyCounter += 1] := stopped
+        return when (
+          # If wait is set, then we wait until there is at least one new log item
+          # before sending a response.
+          if (request.getParameter("wait") != null) {
+            logmark
+          } else {
+            null
+          }
+        ) -> {
+          def slk
+          if (outputType != "none") {
+            # TODO: We could skip this string buffer if we had a Writer
+            # adapter which HTML-escaped.
+            def [tw, sb] := <elib:oldeio.makeTextWriter>.makeBufferingPair()
+            def stopped := makeRepl.makeLogPrinter(tw)(logmark, null)
+            logmarks[bind slk := logmarkKeyCounter += 1] := stopped
         
-          s."write(String)"(html`<pre>${sb.snapshot()}</pre>`.asText())
-        }
+            s."write(String)"(html`<pre>${sb.snapshot()}</pre>`.asText())
+          }
 
-        if (includePage) {
-          s."write(String)"(pageFooterTemplate(slk).asText())
-        } else {
-          # This embedded info is used by murepl.js to update the log pointer in the form.
-          s."write(String)"(html`<form id="logmark" style="display: none;"><input type="hidden" name="log" value="$slk"></form>`.asText())
+          if (includePage) {
+            s."write(String)"(pageFooterTemplate(slk).asText())
+          } else if (outputType != "none") {
+            # This embedded info is used by murepl.js to update the log pointer in the form.
+            s."write(String)"(html`<form id="logmark" style="display: none;"><input type="hidden" name="log" value="$slk"></form>`.asText())
+          }
+        } catch p { 
+          throw <- (p)
+        } finally {
+          s.close()
         }
-        s.close()
       }
 
       to POST(request, response) {
