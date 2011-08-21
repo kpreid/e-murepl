@@ -1,2 +1,1 @@
-IFS=$'\n'
-redo-ifchange src/alljava
+redo-ifchange src/alljava src/org/switchb/e/murepl/transport/http/static/jquery.js

@@ -1,5 +1,4 @@
 BUGS:
-- Host jQuery locally, rejigger build system to allow built files going into web static directory.
 - Caps put into argv for subrepls leak on multiuser unixes.
 
 FEATURES:
@@ -13,6 +12,10 @@ FEATURES:
     - misc libraries.
     - accumulator etc. default to on.
 - Reset-vat button on web UI.
+
+OTHER TODOS:
+- Make sure web UI static files have appropriate caching.
+- Prevent *.do files, .gitignore, etc from being served from static files dir.
 
 pragma.enable("accumulator");def diff(s) {return accum [].asMap() for `&@k` => v ? (!safeScope.maps(k) || v != safeScope.getSlot(k)) in s { _.with(k, v) }}
 

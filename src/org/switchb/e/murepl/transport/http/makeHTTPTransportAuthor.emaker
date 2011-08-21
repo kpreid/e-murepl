@@ -36,7 +36,7 @@ def pageHeaderTemplate() { return html`
 <title>MUREPL</title>
 <link rel='stylesheet' href='../murepl.css' type='text/css'>
 <meta name="viewport" content="width=device-width">
-<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js'></script>
+<script src='../jquery.js'></script>
 <script src='../murepl.js'></script>
 </head><body onload='murepl_init()'>
 

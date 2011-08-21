@@ -8,9 +8,12 @@ Future plans include persistence, asynchronous output, and per-user storage to s
 Building MUREPL
 ---------------
 
-While the core is pure E, MUREPL includes Java code as part of most of its transports. The build system has been written using the 'redo' tool, which may be found at <https://github.com/apenwarr/redo/>. If you cannot obtain redo, then simply consider the .do files as shell scripts and strip out the "redo-ifchange" dependency links.
+While the core is pure E, MUREPL includes Java code as part of most of its transports. The build system has been written using the 'redo' tool, which may be found at <https://github.com/apenwarr/redo/>. If you cannot obtain redo, then simply consider the .do files as shell scripts and replace the "redo-ifchange" dependency links with invoking the subsidiary .do files directly.
 
-The HTTP transport depends on the Jetty HTTP server, <http://jetty.codehaus.org/jetty/>, version 6, which should be downloaded and unpacked into deps/jetty/.
+The HTTP transport depends on:
+  * the Jetty HTTP server <http://jetty.codehaus.org/jetty/> version 6, which
+    should be downloaded and unpacked into deps/jetty/.
+  * jQuery, which should be placed at deps/jquery.js.
 
 Running
 -------
