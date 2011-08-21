@@ -76,5 +76,5 @@ function murepl_init() {
     }
   });
   
-  setTimeout(lp, 0);
+  setTimeout(function () { lp(); }, 0);
 }
